@@ -9,12 +9,12 @@ use autoschematic_core::{
     diag::DiagnosticResponse,
 };
 
-/// This template starts as one file on purpose so the overall control flow is
-/// easy to follow before you break it apart.
 pub struct DummyConnector {
-    /// Connector methods receive repo-relative addresses like
-    /// `aws/s3/us-east-1/buckets/main.ron`, not `{prefix}/aws/...`, so you might store the
-    /// prefix here for E.G. loading config files later.
+    /// Connector methods like get(), plan() etc receive paths (addresses) without a prefix.
+    /// For example, the AWS S3 connector in the prefix main receives 
+    /// `aws/s3/us-east-1/buckets/main.ron`, not `main/aws/s3/us-east-1/...`, 
+    /// more generally, `{addr}`, not `{prefix}/{addr}`, so you might store the
+    /// prefix here for E.G. loading config files from disk later.
     prefix: PathBuf,
 }
 
@@ -41,7 +41,7 @@ impl Connector for DummyConnector {
         // kubeconfig(s) and set max concurrency per cluster connection, for instance.
         //
         // If you support config files, remember that `filter()` must return
-        // `FilterResponse::Config` for those paths so upstream caches are
+        // `FilterResponse::Config` for those paths so upstream caches of filter() are
         // invalidated when config changes.
         Ok(())
     }
@@ -55,8 +55,11 @@ impl Connector for DummyConnector {
         // "snowflake/databases/customer_db/database.sql" => FilterResponse::Resource
         // "snowflake/databases/customer_db/primary/schema.sql" => FilterResponse::Resource
         // "snowflake/databases/customer_db/primary/tables/customer_orgs.sql" => FilterResponse::Resource
-        // In other words, this address decoding logic is the main mechanism by which connectors describe an
-        // ontology of nested objects.
+        // 
+        // 
+        //
+        // In other words, this address decoding logic is the mechanism by which connectors describe an
+        // hierarchy of configurable resource. 
         // Note that addresses never include the prefix here; connectors run with their working directory
         // at the root of the git repo, but they are informed of their prefix at new() and should save it if they need it (for loading configs etc).
         // In other words, if the full path is "./${prefix}/${addr}", connectors are only passed "./${addr}" in operations like filter, get, plan, etc.
@@ -117,12 +120,9 @@ impl Connector for DummyConnector {
     }
 
     async fn op_exec(&self, addr: &Path, op: &str) -> Result<OpExecResponse, anyhow::Error> {
-        // Parse `op` back into your `ConnectorOp` type and perform exactly one
-        // mutation against the remote API.
-        //
-        // If execution discovers values Autoschematic should persist, such as a
-        // remote ID created at runtime, return them in `outputs`. They will be
-        // stored under `.autoschematic/{prefix}/{addr}.out.ron`.
+        // Decode `addr`, deserialize (parse) `op` as your custom ConnectorOp type,
+        // and execute the corresponding operation against the remote API or similar.
+
         let _ = (addr, op);
         Ok(OpExecResponse {
             outputs: None,
